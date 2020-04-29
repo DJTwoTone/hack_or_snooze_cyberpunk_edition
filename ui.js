@@ -9,7 +9,6 @@ $(async function () {
     const $navLogin = $("#nav-login");
     const $navLogOut = $("#nav-logout");
 
-    const $navBar = $("nav");
     const $articlesContainer = $(".articles-container");
     const $mainNavLinks = $("#main-nav-links");
     const $navSubmit = $("#nav-submit");
@@ -145,6 +144,7 @@ $(async function () {
       await generateStories();
       $allStoriesList.show();
 
+      // male and show the currentuser
       currentUserInfo();
       $userProfile.show();
   
@@ -167,6 +167,7 @@ $(async function () {
       // loop through all of our stories and generate HTML for them
       for (let story of storyList.stories) {
         let result = generateStoryHTML(story);
+        // add stars where and when needed
         let starredResult = starResult(story, result);
         $allStoriesList.append(starredResult);   
       }
@@ -193,7 +194,7 @@ $(async function () {
   
       return storyMarkup;
     }
-
+    // a function for adding stars as needed to the story html
     function starResult(story, result) {
       if (currentUser) {
         let favStar = inFav(story) ? "fas" : "far";
@@ -208,6 +209,7 @@ $(async function () {
       }
     }
 
+    // a listener add to the body to listen to star clicks
     $articlesContainer.on('click', '.fa-star', async function (e) {
       
       let articleID = e.target.closest("li").id;
@@ -252,12 +254,14 @@ $(async function () {
       elementsArr.forEach(($elem) => $elem.hide());
     }
   
+    // shows the logged in user nav bar
     function showNavForLoggedInUser() {
       $navLogin.hide();
       $navLogOut.show();
       $mainNavLinks.show();
     }
 
+    // appends the current users info to the dom
     function currentUserInfo() {
       const name = currentUser.name;
       const username = currentUser.username;
@@ -332,6 +336,8 @@ $(async function () {
       $userProfile.show();
     });
     
+
+    // makes the stoires the user has submitted
     async function makeOwnStories() {
       $ownStories.empty();
      
@@ -371,7 +377,7 @@ $(async function () {
       
   }
   
-  
+  // a function to see if a story is in user favorites
     function inFav(story) {
       let favIDs = [];
       if (currentUser) {
@@ -382,6 +388,7 @@ $(async function () {
       }
     }
 
+    // a function to make favorite stories
     function makeFavs() {
       $favStories.empty();
       if (currentUser){
@@ -399,7 +406,7 @@ $(async function () {
       }
     }
 
-
+    // a little loading animation to improve UX
     function loading() {
       hideElements();
       $allStoriesList.empty();
@@ -408,9 +415,6 @@ $(async function () {
       $userProfile.show();
     }
 
-    console.dir(storyList);
-    console.dir(currentUser);
-    console.dir($articlesContainer)
 
   
   });
