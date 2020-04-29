@@ -8,7 +8,9 @@ $(async function () {
     const $ownStories = $("#my-articles");
     const $navLogin = $("#nav-login");
     const $navLogOut = $("#nav-logout");
-  
+
+    const $navBar = $("nav");
+    const $articlesContainer = $(".articles-container");
     const $mainNavLinks = $("#main-nav-links");
     const $navSubmit = $("#nav-submit");
     const $myStories = $("#nav-my-stories");
@@ -27,10 +29,6 @@ $(async function () {
   
     await checkIfLoggedIn();
   
-    /**
-     * Event listener for logging in.
-     *  If successfully we will setup the user instance
-     */
   
     $loginForm.on("submit", async function (evt) {
       evt.preventDefault(); // no page-refresh on submit
@@ -46,6 +44,8 @@ $(async function () {
       syncCurrentUserToLocalStorage();
       loginAndSubmitForm();
     });
+
+
   
     /**
      * Event listener for signing up.
@@ -116,14 +116,16 @@ $(async function () {
       // if there is a token in localStorage, call User.getLoggedInUser
       //  to get an instance of User with the right details
       //  this is designed to run once, on page load
+      loading();
       currentUser = await User.getLoggedInUser(token, username);
+      loading();
       await generateStories();
   
       if (currentUser) {
-        showNavForLoggedInUser();
         currentUserInfo();
-        makeOwnStories();
+        showNavForLoggedInUser();
         makeFavs();
+        makeOwnStories();
       }
     }
   
@@ -131,16 +133,16 @@ $(async function () {
      * A rendering function to run to reset the forms and hide the login info
      */
   
-    function loginAndSubmitForm() {
+    async function loginAndSubmitForm() {
       // hide the forms for logging in and signing up
-      $loginForm.hide();
-      $createAccountForm.hide();
+      hideElements();
   
       // reset those forms
       $loginForm.trigger("reset");
       $createAccountForm.trigger("reset");
   
       // show the stories
+      await generateStories();
       $allStoriesList.show();
 
       currentUserInfo();
@@ -156,50 +158,21 @@ $(async function () {
      */
   
     async function generateStories() {
-      loading();
       // get an instance of StoryList
       const storyListInstance = await StoryList.getStories();
       // update our global variable
       storyList = storyListInstance;
       // empty out that part of the page
       $allStoriesList.empty();
-
-      
       // loop through all of our stories and generate HTML for them
       for (let story of storyList.stories) {
         let result = generateStoryHTML(story);
-        let favStar = inFav(story) ? "fas" : "far";
-        result.prepend(`
-        <span class="star">
-        <i class="${favStar} fa-star">
-        </i>
-        </span>`);
-        
-        $allStoriesList.append(result);
-        
-        $stars = $(".star");
-      
-        $stars.on("click", async function (e) {
-          let articleID = e.target.closest("li").id;
-          let $target = $(e.target);
-          loading();
-          if ($target.closest("i").hasClass("fas")) {
-            $target.toggleClass("fas far");
-            await currentUser.delFav(articleID);
-          } else {
-            $target.toggleClass("far fas");
-            await currentUser.addFav(articleID);
-          }
-          makeFavs();
-          loading();
-          await generateStories();
-        });
-        
-        
+        let starredResult = starResult(story, result);
+        $allStoriesList.append(starredResult);   
       }
     }
-  
-    /**
+      
+      /**
      * A function to render HTML for an individual Story instance
      */
   
@@ -220,6 +193,48 @@ $(async function () {
   
       return storyMarkup;
     }
+
+    function starResult(story, result) {
+      if (currentUser) {
+        let favStar = inFav(story) ? "fas" : "far";
+        result.prepend(`
+          <span class="star">
+          <i class="${favStar} fa-star">
+          </i>
+          </span>`);
+        return result;
+      } else {
+        return result;
+      }
+    }
+
+    $articlesContainer.on('click', '.fa-star', async function (e) {
+      
+      let articleID = e.target.closest("li").id;
+      let $target = $(e.target);
+      if ($target.closest("i").hasClass("fas")) {
+        loading();
+        await currentUser.delFav(articleID);
+        await currentUser.updateUserData();
+        makeFavs();
+        loading();
+        await generateStories();
+        $allStoriesList.show();
+        $userProfile.show();
+      } else {
+        loading();
+        await currentUser.addFav(articleID);
+        await currentUser.updateUserData();
+        makeFavs();
+        loading();
+        await generateStories();
+        $allStoriesList.show();
+        $userProfile.show();
+      }
+});
+    
+
+
   
     /* hide all elements in elementsArr */
   
@@ -288,8 +303,7 @@ $(async function () {
     });
   
     $navFavs.on("click", function (e) {
-      loading();
-      setTimeout(hideElements(), 3000)
+      hideElements();
       $favStories.toggle();
     });
   
@@ -304,7 +318,6 @@ $(async function () {
         url,
       };
       $submitForm.trigger("reset");
-      loading();
       
 
       const storyObj = await storyList.addStory(currentUser, newStory);
@@ -314,27 +327,30 @@ $(async function () {
       // $allStoriesList.prepend(storyHTML);
       await makeOwnStories();
       await generateStories();
+      hideElements();
       $allStoriesList.show();
       $userProfile.show();
     });
     
     async function makeOwnStories() {
       $ownStories.empty();
-      if (currentUser) {
+     
         
         if (currentUser.ownStories.length === 0) {
           $ownStories.append(`
           <h3>My Stories</h3>
           <h5>No stories posted yet</h5>
-        `);
-      } else {
+          `);
+        } else {
         for (let story of currentUser.ownStories) {
           let storyHTML = generateStoryHTML(story);
-          storyHTML.prepend(`
+          storyHTML.prepend(
+            `
           <span class="trash-can">
           <i class="fas fa-trash-alt">
           </i>
-          </span>`);
+          </span>`
+          );
           $ownStories.prepend(storyHTML);
         }
         $ownStories.prepend("<h3>My Stories<h3>");
@@ -346,19 +362,13 @@ $(async function () {
         let articleID = e.target.closest("li").id;
         let $target = $(e.target);
         $ownStories.empty();
-        loading();
         await currentUser.delOwnStory(articleID);
         await generateStories();
         $allStoriesList.show();
         $userProfile.show();
     
-        });
-
-        
-        
-      }
+        }); 
       
-
   }
   
   
@@ -371,6 +381,7 @@ $(async function () {
         return favIDs.includes(story.storyId);
       }
     }
+
     function makeFavs() {
       $favStories.empty();
       if (currentUser){
@@ -380,7 +391,6 @@ $(async function () {
           <h5>Evidently, you haven't liked anything yet yet</h5>
           `);
         } else {
-
           for (let story of currentUser.favorites) {
             let favHTML = generateStoryHTML(story);
             $favStories.append(favHTML);
@@ -395,7 +405,12 @@ $(async function () {
       $allStoriesList.empty();
       $allStoriesList.append(`<h3 class="typewriter">Loading...</h3>`);
       $allStoriesList.show();
+      $userProfile.show();
     }
+
+    console.dir(storyList);
+    console.dir(currentUser);
+    console.dir($articlesContainer)
 
   
   });

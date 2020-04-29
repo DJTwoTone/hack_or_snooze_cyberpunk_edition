@@ -182,7 +182,6 @@ class User {
     this.name = res.data.user.name;
     this.createdAt = res.data.user.createdAt;
     this.updatedAt = res.data.user.updatedAt;
-
     this.ownStories = res.data.user.stories.map((s) => new Story(s));
     this.favorites = res.data.user.favorites.map((s) => new Story(s));
 
@@ -196,17 +195,19 @@ class User {
         token: this.loginToken,
       }
     );
-    this.updateUserData();
+    await this.updateUserData();
+    return this;
   }
-
+  
   async delFav(articleID) {
     const res = await axios.delete(
       `${BASE_URL}/users/${this.username}/favorites/${articleID}`,
       {
         data: { token: this.loginToken },
       }
-    );
-    this.updateUserData();
+      );
+      await this.updateUserData();
+      return this;
   }
 
   async delOwnStory(articleID) {
