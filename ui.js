@@ -8,6 +8,7 @@ $(async function () {
     const $ownStories = $("#my-articles");
     const $navLogin = $("#nav-login");
     const $navLogOut = $("#nav-logout");
+    const $loginError = $('#login-error')
 
     const $articlesContainer = $(".articles-container");
     const $mainNavLinks = $("#main-nav-links");
@@ -31,7 +32,7 @@ $(async function () {
   
     $loginForm.on("submit", async function (evt) {
       evt.preventDefault(); // no page-refresh on submit
-  
+      $loginError.text('');
       // grab the username and password
       const username = $("#login-username").val();
       const password = $("#login-password").val();
@@ -39,9 +40,17 @@ $(async function () {
       // call the login static method to build a user instance
       const userInstance = await User.login(username, password);
       // set the global user to the user instance
-      currentUser = userInstance;
-      syncCurrentUserToLocalStorage();
-      loginAndSubmitForm();
+      if (userInstance === 404) {
+        $loginError.text('User not found');
+      }else if (userInstance === 401) {
+        $loginError.text('Incorrect password');
+      } else {
+        currentUser = userInstance;
+        syncCurrentUserToLocalStorage();
+        loginAndSubmitForm();
+
+      }
+
     });
 
 
@@ -171,6 +180,8 @@ $(async function () {
         let starredResult = starResult(story, result);
         $allStoriesList.append(starredResult);   
       }
+      makeFavs();
+      makeOwnStories();
     }
       
       /**
@@ -217,8 +228,8 @@ $(async function () {
       if ($target.closest("i").hasClass("fas")) {
         loading();
         await currentUser.delFav(articleID);
+        loading();
         await currentUser.updateUserData();
-        makeFavs();
         loading();
         await generateStories();
         $allStoriesList.show();
@@ -227,7 +238,6 @@ $(async function () {
         loading();
         await currentUser.addFav(articleID);
         await currentUser.updateUserData();
-        makeFavs();
         loading();
         await generateStories();
         $allStoriesList.show();
@@ -321,15 +331,13 @@ $(async function () {
         title,
         url,
       };
+      
+      loading();
+      const storyObj = await storyList.addStory(currentUser, newStory);
       $submitForm.trigger("reset");
       
-
-      const storyObj = await storyList.addStory(currentUser, newStory);
-      
       const storyHTML = generateStoryHTML(storyObj);
-      
-      // $allStoriesList.prepend(storyHTML);
-      await makeOwnStories();
+      loading();
       await generateStories();
       hideElements();
       $allStoriesList.show();
@@ -338,42 +346,72 @@ $(async function () {
     
 
     // makes the stoires the user has submitted
-    async function makeOwnStories() {
+    function makeOwnStories() {
       $ownStories.empty();
      
+        if (currentUser) {
+          if (currentUser.ownStories.length === 0) {
+            $ownStories.append(`
+            <h3>My Stories</h3>
+            <h5>No stories posted yet</h5>
+            `);
+          } else {
+          for (let story of currentUser.ownStories) {
+            let storyHTML = generateStoryHTML(story);
+            storyHTML.prepend(
+              `
+            <span class="trash-can">
+            <i class="fas fa-trash-alt">
+            </i>
+            </span>`
+            );
+            storyHTML.append(
+              `
+              <span class="pencil">
+              <i class="fas fa-pencil-alt">
+              </i>
+              </span>`
+            )
+            
+            $ownStories.prepend(storyHTML);
+
+            
+          }
+          $ownStories.prepend("<h3>My Stories<h3>");
         
-        if (currentUser.ownStories.length === 0) {
+        }
+  
+        const $trashcans = $(".trash-can");
+        
+        
+        $trashcans.on("click", async function (e) {
+          let articleID = e.target.closest("li").id;
+          let $target = $(e.target);
+          $ownStories.empty();
+          loading();
+          await currentUser.delOwnStory(articleID);
+          loading();
+          await generateStories();
+          $allStoriesList.show();
+          $userProfile.show();
+
+        const $pencils = $(".pencil");
+        
+        $pencils.on("click", function (e) {
+          console.log('clicked')
+          // let articleID = e.target.closest("li").id;
+          // let $target = $(e.target);
+          // console.log(articleID, $target);
+        })
+      
+          }); 
+
+        } else {
           $ownStories.append(`
           <h3>My Stories</h3>
           <h5>No stories posted yet</h5>
           `);
-        } else {
-        for (let story of currentUser.ownStories) {
-          let storyHTML = generateStoryHTML(story);
-          storyHTML.prepend(
-            `
-          <span class="trash-can">
-          <i class="fas fa-trash-alt">
-          </i>
-          </span>`
-          );
-          $ownStories.prepend(storyHTML);
         }
-        $ownStories.prepend("<h3>My Stories<h3>");
-      }
-
-      const $trashcans = $(".trash-can");
-      
-      $trashcans.on("click", async function (e) {
-        let articleID = e.target.closest("li").id;
-        let $target = $(e.target);
-        $ownStories.empty();
-        await currentUser.delOwnStory(articleID);
-        await generateStories();
-        $allStoriesList.show();
-        $userProfile.show();
-    
-        }); 
       
   }
   
@@ -414,7 +452,6 @@ $(async function () {
       $allStoriesList.show();
       $userProfile.show();
     }
-
 
   
   });

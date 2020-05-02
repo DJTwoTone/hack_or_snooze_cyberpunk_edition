@@ -120,7 +120,12 @@ class User {
         username,
         password,
       },
-    });
+    }).catch(function (error) {
+      if (error.response.status === 404) {
+       return(404)
+      } else if (error.response.status === 401) {
+        return(401)
+      }});
 
     // build a new User instance from the API response
     const existingUser = new User(response.data.user);
