@@ -19,8 +19,13 @@ $(async function () {
     const $userProfile = $("#user-profile");
     const $profileName = $("#profile-name");
     const $profileUsername = $("#profile-username");
-    const $profileAccountDate = $("#profile-account-date")
-  
+    const $profileAccountDate = $("#profile-account-date");
+    const $editArticles = $('#edit-article-form');
+    const $editAuthor = $('#edit-author');
+    const $editTitle = $('#edit-title');
+    const $editUrl = $('#edit-url');
+    const $editId = $('#edit-story-id');
+   
     // global storyList variable
     let storyList = null;
   
@@ -39,18 +44,23 @@ $(async function () {
   
       // call the login static method to build a user instance
       const userInstance = await User.login(username, password);
+      console.log(userInstance);
       // set the global user to the user instance
       if (userInstance === 404) {
+        
         $loginError.text('User not found');
+        $loginForm.trigger('reset');
+        
       }else if (userInstance === 401) {
+        
         $loginError.text('Incorrect password');
+        $loginForm.trigger('reset');
+        
       } else {
         currentUser = userInstance;
         syncCurrentUserToLocalStorage();
         loginAndSubmitForm();
-
       }
-
     });
 
 
@@ -259,7 +269,8 @@ $(async function () {
         $loginForm,
         $createAccountForm,
         $favStories,
-        $userProfile
+        $userProfile,
+        $editArticles
       ];
       elementsArr.forEach(($elem) => $elem.hide());
     }
@@ -320,6 +331,8 @@ $(async function () {
       hideElements();
       $favStories.toggle();
     });
+
+
   
     $submitForm.on("submit", async function (e) {
       e.preventDefault();
@@ -395,16 +408,26 @@ $(async function () {
           $allStoriesList.show();
           $userProfile.show();
 
+          
+        }); 
+
         const $pencils = $(".pencil");
         
         $pencils.on("click", function (e) {
           console.log('clicked')
-          // let articleID = e.target.closest("li").id;
-          // let $target = $(e.target);
-          // console.log(articleID, $target);
-        })
-      
-          }); 
+          let articleID = e.target.closest("li").id;
+          let $target = $(e.target);
+          for (story of currentUser.ownStories) {
+            if (story.storyId === articleID) {
+              $editId.text(story.storyId);
+              $editAuthor.val(story.author);
+              $editTitle.val(story.title);
+              $editUrl.val(story.url);
+            }
+          }
+          hideElements();
+          $editArticles.toggle()
+        });
 
         } else {
           $ownStories.append(`
@@ -444,6 +467,33 @@ $(async function () {
       }
     }
 
+    $editArticles.on("submit", async function (e) {
+      e.preventDefault();
+      const storyId = $editId.text();
+      const author = $editAuthor.val();
+      const title = $editTitle.val();
+      const url = $editUrl.val();
+      const editedStory = {
+        author,
+        title,
+        url,
+      };
+
+      const token = currentUser.loginToken
+      
+      console.log(token, storyId, editedStory)
+      loading();
+      await currentUser.editOwnStory(token, storyId, editedStory);
+      $submitForm.trigger("reset");
+      
+      loading();
+      await generateStories();
+      hideElements();
+      $allStoriesList.show();
+      $userProfile.show();
+      
+    });
+
     // a little loading animation to improve UX
     function loading() {
       hideElements();
@@ -453,6 +503,6 @@ $(async function () {
       $userProfile.show();
     }
 
-  
+  console.dir(currentUser)
   });
   

@@ -115,35 +115,39 @@ class User {
    */
 
   static async login(username, password) {
-    const response = await axios.post(`${BASE_URL}/login`, {
-      user: {
-        username,
-        password,
-      },
-    }).catch(function (error) {
-      if (error.response.status === 404) {
-       return(404)
-      } else if (error.response.status === 401) {
-        return(401)
-      }});
-
-    // build a new User instance from the API response
-    const existingUser = new User(response.data.user);
-
-    // instantiate Story instances for the user's favorites and ownStories
-    existingUser.favorites = response.data.user.favorites.map(
-      (s) => new Story(s)
-    );
-    existingUser.ownStories = response.data.user.stories.map(
-      (s) => new Story(s)
-    );
-
-    // attach the token to the newUser instance for convenience
-    existingUser.loginToken = response.data.token;
-
-    return existingUser;
-  }
-
+    try {
+      const response = await axios.post(`${BASE_URL}/login`, {
+        user: {
+          username,
+          password,
+        },
+      })
+      
+      // build a new User instance from the API response
+      const existingUser = new User(response.data.user);
+      
+      // instantiate Story instances for the user's favorites and ownStories
+      existingUser.favorites = response.data.user.favorites.map(
+        (s) => new Story(s)
+        );
+        existingUser.ownStories = response.data.user.stories.map(
+          (s) => new Story(s)
+          );
+          
+          // attach the token to the newUser instance for convenience
+          existingUser.loginToken = response.data.token;
+          
+          return existingUser;
+        } catch (e) {
+          if (e.response.status === 404) {
+           console.dir(e.response.status)
+           return(404)
+          } else if (e.response.status === 401) {
+            console.dir(e.response.status)
+            return(401)
+          }};
+        }
+        
   /** Get user instance for the logged-in-user.
    *
    * This function uses the token & username to make an API request to get details
@@ -205,7 +209,7 @@ class User {
   }
   
   async delFav(articleID) {
-    const res = await axios.delete(
+    await axios.delete(
       `${BASE_URL}/users/${this.username}/favorites/${articleID}`,
       {
         data: { token: this.loginToken },
@@ -216,10 +220,22 @@ class User {
   }
 
   async delOwnStory(articleID) {
-    const res = await axios.delete(`${BASE_URL}/stories/${articleID}`, {
+    await axios.delete(`${BASE_URL}/stories/${articleID}`, {
       data: { token: this.loginToken },
     });
-    this.updateUserData();
+    await this.updateUserData();
+    return this;
+  }
+
+  async editOwnStory(token, storyId, editedStory) {
+    console.log(token, storyId, editedStory)
+    await axios.patch(`${BASE_URL}/stories/${storyId}`, { 
+        'token': token,
+        'story': editedStory
+      }
+    );
+    await this.updateUserData();
+    return this;
   }
 }
 
