@@ -140,10 +140,8 @@ class User {
           return existingUser;
         } catch (e) {
           if (e.response.status === 404) {
-           console.dir(e.response.status)
            return(404)
           } else if (e.response.status === 401) {
-            console.dir(e.response.status)
             return(401)
           }};
         }
@@ -181,6 +179,7 @@ class User {
     return existingUser;
   }
 
+  // updates local user data
   async updateUserData() {
     const res = await axios.get(`${BASE_URL}/users/${this.username}`, {
       params: {
@@ -197,6 +196,7 @@ class User {
     return this;
   }
 
+  //adds a favorited article to the api
   async addFav(articleID) {
     const res = await axios.post(
       `${BASE_URL}/users/${this.username}/favorites/${articleID}`,
@@ -208,6 +208,7 @@ class User {
     return this;
   }
   
+  //deletes a favorited article from the api
   async delFav(articleID) {
     await axios.delete(
       `${BASE_URL}/users/${this.username}/favorites/${articleID}`,
@@ -219,6 +220,7 @@ class User {
       return this;
   }
 
+  //deletes stories submitted by user
   async delOwnStory(articleID) {
     await axios.delete(`${BASE_URL}/stories/${articleID}`, {
       data: { token: this.loginToken },
@@ -227,8 +229,8 @@ class User {
     return this;
   }
 
+  //edits stories submitted by the user
   async editOwnStory(token, storyId, editedStory) {
-    console.log(token, storyId, editedStory)
     await axios.patch(`${BASE_URL}/stories/${storyId}`, { 
         'token': token,
         'story': editedStory

@@ -44,32 +44,26 @@ $(async function () {
   
       // call the login static method to build a user instance
       const userInstance = await User.login(username, password);
-      console.log(userInstance);
-      // set the global user to the user instance
+
+      //check for login errors
       if (userInstance === 404) {
-        
         $loginError.text('User not found');
         $loginForm.trigger('reset');
-        
       }else if (userInstance === 401) {
-        
         $loginError.text('Incorrect password');
         $loginForm.trigger('reset');
-        
       } else {
+        // set the global user to the user instance
         currentUser = userInstance;
         syncCurrentUserToLocalStorage();
         loginAndSubmitForm();
       }
-    });
-
-
-  
+    });      
+    
     /**
      * Event listener for signing up.
      *  If successfully we will setup a new user instance
      */
-  
     $createAccountForm.on("submit", async function (evt) {
       evt.preventDefault(); // no page refresh
   
@@ -160,6 +154,7 @@ $(async function () {
       $createAccountForm.trigger("reset");
   
       // show the stories
+      loading();
       await generateStories();
       $allStoriesList.show();
 
@@ -316,24 +311,26 @@ $(async function () {
         localStorage.setItem("username", currentUser.username);
       }
     }
-  
+  //handle for article submit form
     $navSubmit.on("click", function (e) {
       hideElements();
       $submitForm.toggle();
     });
   
+    //handler for showing my stories
     $myStories.on("click", function (e) {
       hideElements();
       $ownStories.toggle()
     });
   
+    //handler for showing favorited articles
     $navFavs.on("click", function (e) {
       hideElements();
       $favStories.toggle();
     });
 
 
-  
+  //function to submit articles
     $submitForm.on("submit", async function (e) {
       e.preventDefault();
       const author = $("#author").val();
@@ -396,10 +393,9 @@ $(async function () {
   
         const $trashcans = $(".trash-can");
         
-        
+        // listener for deleting my stories
         $trashcans.on("click", async function (e) {
           let articleID = e.target.closest("li").id;
-          let $target = $(e.target);
           $ownStories.empty();
           loading();
           await currentUser.delOwnStory(articleID);
@@ -413,10 +409,9 @@ $(async function () {
 
         const $pencils = $(".pencil");
         
+        //handler for editing my stories
         $pencils.on("click", function (e) {
-          console.log('clicked')
           let articleID = e.target.closest("li").id;
-          let $target = $(e.target);
           for (story of currentUser.ownStories) {
             if (story.storyId === articleID) {
               $editId.text(story.storyId);
@@ -467,6 +462,7 @@ $(async function () {
       }
     }
 
+    //listener for submitting an edited article
     $editArticles.on("submit", async function (e) {
       e.preventDefault();
       const storyId = $editId.text();
@@ -481,7 +477,6 @@ $(async function () {
 
       const token = currentUser.loginToken
       
-      console.log(token, storyId, editedStory)
       loading();
       await currentUser.editOwnStory(token, storyId, editedStory);
       $submitForm.trigger("reset");
@@ -502,7 +497,5 @@ $(async function () {
       $allStoriesList.show();
       $userProfile.show();
     }
-
-  console.dir(currentUser)
   });
   
